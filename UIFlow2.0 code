@@ -1,0 +1,159 @@
+import M5
+import time
+from M5 import Widgets
+
+# --- 配置 ---
+ACC_IDX = 1  # 0=X, 1=Y, 2=Z
+DOWN_LIMIT = 0.4 
+UP_LIMIT = 0.8   
+
+count = 0
+is_down = False
+lbl_val = None
+lbl_count = None
+lbl_status = None
+
+def setup():
+    M5.begin()
+    
+    global lbl_val, lbl_count, lbl_status
+    
+    # 创建标签 - 注意不同固件版本可能使用不同的属性名
+    try:
+        # 尝试多种常见的字体大小设置
+        lbl_val = Widgets.Label("Acc: 0.00", 10, 40, 1.0, 0xaaaaaa, 0x000000, Widgets.FONTS.DejaVu18)
+        lbl_count = Widgets.Label("Count: 0", 10, 80, 1.0, 0x00ff00, 0x000000, Widgets.FONTS.DejaVu40)
+        lbl_status = Widgets.Label("READY", 10, 160, 1.0, 0xffff00, 0x000000, Widgets.FONTS.DejaVu24)
+    except:
+        # 如果上面的字体不可用，尝试使用默认字体
+        try:
+            lbl_val = Widgets.Label("Acc: 0.00", 10, 40, 1.0, 0xaaaaaa, 0x000000)
+            lbl_count = Widgets.Label("Count: 0", 10, 80, 1.0, 0x00ff00, 0x000000)
+            lbl_status = Widgets.Label("READY", 10, 160, 1.0, 0xffff00, 0x000000)
+        except Exception as e:
+            print("创建标签失败:", e)
+    
+    # 显示IMU信息
+    print("M5版本:", dir(M5))
+    if hasattr(M5, 'Imu'):
+        print("IMU属性:", dir(M5.Imu))
+    if hasattr(M5, 'IMU'):
+        print("IMU大写属性:", dir(M5.IMU))
+
+def get_imu_accel():
+    """获取加速度数据"""
+    # 尝试多种方法读取IMU数据
+    try:
+        # 方法1: 直接读取accel属性
+        if hasattr(M5.Imu, 'acceleration'):
+            data = M5.Imu.acceleration
+            if data is not None:
+                return [data.x, data.y, data.z]
+        
+        # 方法2: 读取accel属性
+        if hasattr(M5.Imu, 'accel'):
+            data = M5.Imu.accel
+            if data is not None:
+                if isinstance(data, tuple) and len(data) >= 3:
+                    return list(data)
+                elif hasattr(data, 'x') and hasattr(data, 'y') and hasattr(data, 'z'):
+                    return [data.x, data.y, data.z]
+        
+        # 方法3: 使用get_accel方法
+        if hasattr(M5.Imu, 'get_accel'):
+            data = M5.Imu.get_accel()
+            if data is not None:
+                if isinstance(data, tuple) and len(data) >= 3:
+                    return list(data)
+                elif hasattr(data, 'x') and hasattr(data, 'y') and hasattr(data, 'z'):
+                    return [data.x, data.y, data.z]
+        
+        # 方法4: 使用getAccel方法
+        if hasattr(M5.Imu, 'getAccel'):
+            data = M5.Imu.getAccel()
+            if data is not None:
+                if isinstance(data, tuple) and len(data) >= 3:
+                    return list(data)
+                elif hasattr(data, 'x') and hasattr(data, 'y') and hasattr(data, 'z'):
+                    return [data.x, data.y, data.z]
+        
+        # 方法5: 检查IMU大写对象
+        if hasattr(M5, 'IMU'):
+            imu_obj = M5.IMU
+            if hasattr(imu_obj, 'acceleration'):
+                data = imu_obj.acceleration
+                if data is not None:
+                    return [data.x, data.y, data.z]
+            elif hasattr(imu_obj, 'accel'):
+                data = imu_obj.accel
+                if data is not None:
+                    if isinstance(data, tuple) and len(data) >= 3:
+                        return list(data)
+                    elif hasattr(data, 'x') and hasattr(data, 'y') and hasattr(data, 'z'):
+                        return [data.x, data.y, data.z]
+        
+    except Exception as e:
+        print("IMU读取错误:", e)
+    
+    return [0, 0, 0]  # 返回默认值
+
+def update_label(label, text, text_color=None):
+    """更新标签文本，兼容不同固件版本"""
+    try:
+        # 方法1: 尝试 set_text
+        if hasattr(label, 'set_text'):
+            label.set_text(text)
+        # 方法2: 尝试 setText
+        elif hasattr(label, 'setText'):
+            label.setText(text)
+        # 方法3: 尝试直接设置 text 属性
+        elif hasattr(label, 'text'):
+            label.text = text
+        else:
+            print("无法更新标签，不支持的API")
+        
+        # 设置文本颜色
+        if text_color is not None:
+            if hasattr(label, 'set_color'):
+                label.set_color(text_color)
+            elif hasattr(label, 'setColor'):
+                label.setColor(text_color)
+            elif hasattr(label, 'color'):
+                label.color = text_color
+    except Exception as e:
+        print("更新标签错误:", e)
+
+def loop():
+    global count, is_down
+    M5.update()
+    
+    # 获取加速度数据
+    accel = get_imu_accel()
+    current_a = abs(accel[ACC_IDX])
+    
+    # 打印调试信息
+    print(f"加速度: {accel[0]:.2f}, {accel[1]:.2f}, {accel[2]:.2f}")
+    
+    # 更新显示
+    update_label(lbl_val, "Acc: %.2f" % current_a)
+    
+    # 逻辑判断
+    if current_a < DOWN_LIMIT and not is_down:
+        is_down = True
+        update_label(lbl_status, "DOWN", 0xff0000)
+        
+    elif current_a > UP_LIMIT and is_down:
+        count += 1
+        is_down = False
+        update_label(lbl_count, "Count: " + str(count))
+        update_label(lbl_status, "UP", 0x00ff00)
+        
+    time.sleep(0.05)
+
+if __name__ == '__main__':
+    try:
+        setup()
+        while True:
+            loop()
+    except Exception as e:
+        print("程序错误:", e)
