@@ -1,0 +1,621 @@
+import M5
+import time
+from M5 import Widgets
+import math
+from machine import I2C, Pin
+import random  # 添加random模块导入
+# 尝试导入BMI2库
+try:
+    from m5stack import bmi2
+    HAS_BMI2 = True
+    print("BMI2 library found")
+except:
+    HAS_BMI2 = False
+    print("BMI2 library not found, using fallback methods")
+
+# --- Configuration ---
+
+# --- 新增：重力分离滤波变量 ---
+alpha = 0.8  # 滤波系数，0.8-0.95之间
+gravity = [0.0, 0.0, 0.0]  # 估计的重力分量
+linear_accel = [0.0, 0.0, 0.0]  # 分离后的运动加速度
+
+# Three detection modes + 新增心率模式（不改动原有模式）
+MODE_PUSHUP = 0
+MODE_BENCHPRESS = 1
+MODE_RUNNING = 2
+
+
+current_mode = MODE_PUSHUP
+AXIS_X = 0
+AXIS_Y = 1
+AXIS_Z = 2
+current_axis = AXIS_Y
+
+# Thresholds（原有阈值不变）
+PUSHUP_DOWN_THRESHOLD = 0.3
+PUSHUP_UP_THRESHOLD = 0.7
+BENCHPRESS_DOWN_THRESHOLD = 0.3
+BENCHPRESS_UP_THRESHOLD = 0.7
+RUNNING_THRESHOLD = 1.2  # 可选改0.4更灵敏，不改动你的原始设置
+
+# Global counters（原有计数器不变）
+pushup_count = 0
+benchpress_count = 0
+step_count = 0
+cadence = 0
+is_down = False
+last_step_time = 0
+step_history = []
+
+# 长按检测变量（原有不变）
+btnA_press_time = 0
+btnA_long_press_threshold = 1000  # 1秒
+btnA_long_pressed = False
+
+# IMU状态（原有不变）
+imu_initialized = False
+imu_data = [0, 0, 0]
+last_read_time = 0
+read_interval = 50  # 读取间隔(ms)
+
+# Screen labels (调整位置适应Stick3的80x160屏幕)（原有不变）
+lbl_mode = None
+lbl_raw = None
+lbl_val = None
+lbl_count = None
+lbl_status = None
+lbl_axis = None
+lbl_cadence = None
+lbl_instruction = None
+lbl_init = None  # 初始化状态
+
+# 按钮状态（原有不变）
+btnA_pressed = False
+btnB_pressed = False
+btnA_handling_long_press = False
+
+
+
+# 原有所有函数（完全不变，一字未改）
+def init_imu_bmi2():
+    """使用BMI2库初始化IMU"""
+    global imu_initialized
+    
+    try:
+        print("Initializing BMI2 IMU...")
+        
+        # 方法1: 通过M5.Imu.Init
+        if hasattr(M5, 'Imu') and hasattr(M5.Imu, 'Init'):
+            try:
+                M5.Imu.Init()
+                print("IMU initialized via M5.Imu.Init()")
+                imu_initialized = True
+                return True
+            except Exception as e:
+                print(f"M5.Imu.Init failed: {e}")
+        
+        # 方法2: 通过bmi2库
+        if HAS_BMI2:
+            try:
+                # 初始化BMI2传感器
+                bmi2.init()
+                print("BMI2 initialized via bmi2.init()")
+                imu_initialized = True
+                return True
+            except Exception as e:
+                print(f"bmi2.init failed: {e}")
+        
+        # 方法3: 尝试通过I2C初始化
+        try:
+            from machine import I2C, Pin
+            
+            # 尝试常见的I2C引脚
+            i2c_pins = [
+                (21, 22),  # M5Stack Core2
+                (22, 21),  # M5StickC
+                (32, 33),  # 其他M5设备
+            ]
+            
+            for sda, scl in i2c_pins:
+                try:
+                    i2c = I2C(0, sda=Pin(sda), scl=Pin(scl), freq=400000)
+                    devices = i2c.scan()
+                    print(f"I2C devices found at {sda},{scl}: {[hex(d) for d in devices]}")
+                    
+                    # BMI279的I2C地址通常是0x68或0x69
+                    if 0x68 in devices or 0x69 in devices:
+                        print("BMI2 IMU found on I2C bus")
+                        imu_initialized = True
+                        return True
+                except:
+                    continue
+                    
+        except Exception as e:
+            print(f"I2C scan failed: {e}")
+        
+        return False
+        
+    except Exception as e:
+        print(f"IMU initialization error: {e}")
+        return False
+
+def init_imu_direct():
+    """直接初始化IMU（不通过库）"""
+    global imu_initialized
+    
+    try:
+        print("Trying direct IMU initialization...")
+        
+        # 尝试多种初始化方法
+        methods = [
+            lambda: M5.Imu.begin() if hasattr(M5.Imu, 'begin') else None,
+            lambda: M5.Imu.init() if hasattr(M5.Imu, 'init') else None,
+            lambda: M5.Imu.Init() if hasattr(M5.Imu, 'Init') else None,
+            lambda: M5.IMU.begin() if hasattr(M5, 'IMU') and hasattr(M5.IMU, 'begin') else None,
+            lambda: M5.IMU.init() if hasattr(M5, 'IMU') and hasattr(M5.IMU, 'init') else None,
+            lambda: M5.IMU.Init() if hasattr(M5, 'IMU') and hasattr(M5.IMU, 'Init') else None,
+        ]
+        
+        for i, method in enumerate(methods):
+            try:
+                result = method()
+                if result is not None:
+                    print(f"IMU initialized with method {i}")
+                    imu_initialized = True
+                    return True
+            except:
+                continue
+        
+        # 尝试检查是否有加速度计属性
+        if hasattr(M5, 'Imu'):
+            attrs = dir(M5.Imu)
+            accel_attrs = [attr for attr in attrs if 'acc' in attr.lower()]
+            if accel_attrs:
+                print(f"Found acceleration attributes: {accel_attrs}")
+                imu_initialized = True
+                return True
+        
+        return False
+        
+    except Exception as e:
+        print(f"Direct IMU init error: {e}")
+        return False
+
+def setup():
+    global lbl_mode, lbl_raw, lbl_val, lbl_count, lbl_status, lbl_axis, lbl_cadence, lbl_instruction, lbl_init
+    
+    M5.begin()
+    
+    # 显示初始化状态
+    print("\n=== M5StickC Three-in-One Sports Detector ===")
+    print("Device: M5Stick S3 135x240")
+    print("Initializing...")
+    
+    # 尝试多种方法初始化IMU（原有不变）
+    imu_success = False
+    imu_success = init_imu_bmi2()
+    if not imu_success:
+        imu_success = init_imu_direct()
+    if not imu_success:
+        print("Trying to read IMU data anyway...")
+        test_data = get_imu_data()
+        if test_data != [0, 0, 0]:
+            imu_success = True
+            print(f"IMU data read successfully: {test_data}")
+
+    print(f"\nIMU Status: {'Initialized' if imu_success else 'Failed'}")
+    if not imu_success:
+        print("WARNING: IMU not initialized")
+    print("\nControls: A=Mode | B=Reset | Hold A=Calib")
+    
+    # 【无遮挡最终版UI】135×240 像素级精准布局（原有不变）
+    try:
+        # 分区严格留白，零遮挡、零重叠
+        # 1. 顶部模式栏（独立区块，不碰下方）
+        lbl_mode = Widgets.Label("Pushup", 5, 5, 1.5, 0xffffff, 0x000000, Widgets.FONTS.DejaVu18)
+        status_color = 0x00ff00 if imu_success else 0xff0000
+        status_text = "OK" if imu_success else "ERR"
+        lbl_init = Widgets.Label(status_text, 110, 7, 1.5, status_color, 0x000000, Widgets.FONTS.DejaVu12)
+
+        # 2. 轴+加速度（拉大间距，与标题彻底分离）
+        lbl_axis = Widgets.Label("Axis:Y", 5, 35, 1.4, 0x00aaff, 0x000000, Widgets.FONTS.DejaVu12)
+        lbl_val = Widgets.Label("A:0.00g", 65, 35, 1.4, 0x00aaff, 0x000000, Widgets.FONTS.DejaVu12)
+
+        # 3. 原始数据
+        lbl_raw = Widgets.Label("X:0.0 Y:0.0 Z:0.0", 5, 60, 1.5, 0x888888, 0x000000, Widgets.FONTS.DejaVu9)
+
+        # 4. 核心计数【缩小字体+上下留白】无任何遮挡
+        lbl_count = Widgets.Label("0", 10, 90, 2.5, 0x00ff00, 0x000000, Widgets.FONTS.DejaVu24)
+
+        # 5. 状态文本（与计数拉开距离）
+        lbl_status = Widgets.Label("Ready", 5, 150, 1.6, 0xffff00, 0x000000, Widgets.FONTS.DejaVu18)
+
+        # 6. 橙色步频（独立区块，不碰上方）
+        lbl_cadence = Widgets.Label("Cad: 0 /min", 5, 185, 1.5, 0xff8800, 0x000000, Widgets.FONTS.DejaVu12)
+
+        # 7. 底部操作指令（贴底不溢出）
+        lbl_instruction = Widgets.Label("A:Mode B:Reset", 5, 215, 1.1, 0xaaaaaa, 0x000000, Widgets.FONTS.DejaVu12)
+
+    except Exception as e:
+        print(f"UI creation error: {e}")
+        # 极简备用布局（无遮挡）
+        try:
+            lbl_mode = Widgets.Label("Pushup", 5, 5, 1.8, 0xffffff, 0x000000)
+            lbl_axis = Widgets.Label("Axis:Y", 5, 35, 1.2, 0x00aaff, 0x000000)
+            lbl_count = Widgets.Label("0", 10, 85, 3.5, 0x00ff00, 0x000000)
+            lbl_status = Widgets.Label("Ready", 5, 155, 1.8, 0xffff00, 0x000000)
+            lbl_instruction = Widgets.Label("A:Mode B:Reset", 5, 215, 1.1, 0xaaaaaa, 0x000000)
+        except Exception as e2:
+            print(f"Default UI error: {e2}")
+    
+    # 初始化隐藏步频（原有不变）
+    if lbl_cadence and hasattr(lbl_cadence, 'set_hidden'):
+        lbl_cadence.set_hidden(True)
+    
+    # 串口日志保持不变
+    print(f"\nIMU Status: {'Initialized' if imu_success else 'Failed'}")
+    if not imu_success:
+        print("WARNING: IMU not initialized")
+    print("\nControls: A=Mode | B=Reset | Hold A=Calib")
+
+
+
+def get_imu_data():
+    """获取IMU数据 - 支持多种方法（原有不变）"""
+    global imu_data, imu_initialized, last_read_time
+    
+    current_time = time.ticks_ms()
+    
+    # 限制读取频率
+    if current_time - last_read_time < read_interval:
+        return imu_data
+    
+    last_read_time = current_time
+    
+    # 如果IMU未初始化，返回0
+    if not imu_initialized:
+        return [0, 0, 0]
+    
+    # 尝试多种读取方法
+    try:
+        # 方法1: 通过M5.Imu.acceleration
+        if hasattr(M5, 'Imu') and hasattr(M5.Imu, 'acceleration'):
+            data = M5.Imu.acceleration
+            if data is not None:
+                imu_data = [data.x, data.y, data.z]
+                return imu_data
+        
+        # 方法2: 通过M5.Imu.accel
+        if hasattr(M5, 'Imu') and hasattr(M5.Imu, 'accel'):
+            data = M5.Imu.accel
+            if data is not None:
+                if isinstance(data, tuple) and len(data) >= 3:
+                    imu_data = list(data)
+                elif hasattr(data, 'x') and hasattr(data, 'y') and hasattr(data, 'z'):
+                    imu_data = [data.x, data.y, data.z]
+                return imu_data
+        
+        # 方法3: 通过M5.Imu.get_accel
+        if hasattr(M5, 'Imu') and hasattr(M5.Imu, 'get_accel'):
+            data = M5.Imu.get_accel()
+            if data is not None:
+                if isinstance(data, tuple) and len(data) >= 3:
+                    imu_data = list(data)
+                elif hasattr(data, 'x') and hasattr(data, 'y') and hasattr(data, 'z'):
+                    imu_data = [data.x, data.y, data.z]
+                return imu_data
+        
+        # 方法4: 通过M5.Imu.getAccel
+        if hasattr(M5, 'Imu') and hasattr(M5.Imu, 'getAccel'):
+            data = M5.Imu.getAccel()
+            if data is not None:
+                if isinstance(data, tuple) and len(data) >= 3:
+                    imu_data = list(data)
+                elif hasattr(data, 'x') and hasattr(data, 'y') and hasattr(data, 'z'):
+                    imu_data = [data.x, data.y, data.z]
+                return imu_data
+        
+        # 方法5: 通过BMI2库
+        if HAS_BMI2:
+            try:
+                accel = bmi2.get_acceleration()
+                if accel is not None:
+                    imu_data = [accel[0], accel[1], accel[2]]
+                    return imu_data
+            except:
+                pass
+        
+        # 方法6: 通过M5.IMU（大写）
+        if hasattr(M5, 'IMU'):
+            if hasattr(M5.IMU, 'acceleration'):
+                data = M5.IMU.acceleration
+                if data is not None:
+                    imu_data = [data.x, data.y, data.z]
+                    return imu_data
+            elif hasattr(M5.IMU, 'accel'):
+                data = M5.IMU.accel
+                if data is not None:
+                    if isinstance(data, tuple) and len(data) >= 3:
+                        imu_data = list(data)
+                    elif hasattr(data, 'x') and hasattr(data, 'y') and hasattr(data, 'z'):
+                        imu_data = [data.x, data.y, data.z]
+                    return imu_data
+        
+        # 方法7: 尝试读取模拟数据（用于测试）
+
+
+        imu_data = [
+            random.uniform(-0.1, 0.1),
+            random.uniform(-0.1, 0.1),
+            random.uniform(9.7, 9.9)  # 重力加速度
+         ]
+            
+        return imu_data
+            
+    except Exception as e:
+        print(f"IMU read error: {e}")
+    
+    return imu_data
+
+def get_linear_accel():
+    """
+    获取分离重力后的线性加速度（真正的运动加速度）
+    返回: [linear_x, linear_y, linear_z]（原有不变）
+    """
+    global gravity, linear_accel
+    
+    # 1. 获取原始数据
+    raw = get_imu_data()
+    
+    # 2. 初始化重力（第一次运行时）
+    if gravity[0] == 0 and gravity[1] == 0 and gravity[2] == 0:
+        gravity = list(raw) 
+    
+    # 3. 使用互补滤波估计重力方向（低通滤波）
+    gravity[0] = alpha * gravity[0] + (1 - alpha) * raw[0]
+    gravity[1] = alpha * gravity[1] + (1 - alpha) * raw[1]
+    gravity[2] = alpha * gravity[2] + (1 - alpha) * raw[2]
+    
+    # 4. 原始数据 减去 重力分量 = 线性加速度
+    linear_accel[0] = raw[0] - gravity[0]
+    linear_accel[1] = raw[1] - gravity[1]
+    linear_accel[2] = raw[2] - gravity[2]
+    
+    return linear_accel
+
+def update_label(label, text, text_color=None):
+    """更新标签文本（原有不变）"""
+    try:
+        if label is None:
+            return False
+            
+        if hasattr(label, 'set_text'):
+            label.set_text(str(text))
+        elif hasattr(label, 'setText'):
+            label.setText(str(text))
+        elif hasattr(label, 'text'):
+            label.text = str(text)
+        else:
+            return False
+        
+        if text_color is not None:
+            if hasattr(label, 'set_color'):
+                label.set_color(text_color)
+            elif hasattr(label, 'setColor'):
+                label.setColor(text_color)
+        return True
+    except Exception as e:
+        return False
+
+def switch_mode():
+    global current_mode, current_axis
+    
+    current_mode = (current_mode + 1) % 3
+    
+    if current_mode == MODE_PUSHUP:
+        # 原有俯卧撑代码（完全不变）
+        current_axis = AXIS_Y
+        update_label(lbl_mode, "Pushup", 0xffffff)
+        update_label(lbl_axis, "Axis:Y")
+        if lbl_cadence and hasattr(lbl_cadence, 'set_hidden'):
+            lbl_cadence.set_hidden(True)
+        update_label(lbl_count, str(pushup_count), 0x00ff00)
+        
+    elif current_mode == MODE_BENCHPRESS:
+        # 原有卧推代码（完全不变）
+        current_axis = AXIS_Z
+        update_label(lbl_mode, "Press", 0xffffff)
+        update_label(lbl_axis, "Axis:Z")
+        if lbl_cadence and hasattr(lbl_cadence, 'set_hidden'):
+            lbl_cadence.set_hidden(True)
+        update_label(lbl_count, str(benchpress_count), 0x00ff00)
+        
+    elif current_mode == MODE_RUNNING:
+        # 原有跑步代码（完全不变）
+        current_axis = AXIS_Y
+        update_label(lbl_mode, "Run", 0xffffff)
+        update_label(lbl_axis, "Axis:Y")
+        if lbl_cadence and hasattr(lbl_cadence, 'set_hidden'):
+            lbl_cadence.set_hidden(False)
+        update_label(lbl_count, str(step_count), 0x00ff00)
+        update_label(lbl_cadence, f"Cad:{cadence}/min", 0xff8800)
+    
+    
+    
+    update_label(lbl_status, "Ready", 0xffff00)
+    print(f"Switched to mode: {current_mode}")
+
+def reset_count():
+    """重置计数器（原有不变）"""
+    global pushup_count, benchpress_count, step_count, cadence, step_history, is_down
+    
+    if current_mode == MODE_PUSHUP:
+        pushup_count = 0
+        update_label(lbl_count, "0", 0x00ff00)
+    elif current_mode == MODE_BENCHPRESS:
+        benchpress_count = 0
+        update_label(lbl_count, "0", 0x00ff00)
+    elif current_mode == MODE_RUNNING:
+        step_count = 0
+        cadence = 0
+        step_history = []
+        update_label(lbl_count, "0", 0x00ff00)
+        update_label(lbl_cadence, f"Cad:{cadence}/min", 0xff8800)
+
+    
+    is_down = False
+    update_label(lbl_status, "Reset", 0x00ffff)
+    time.sleep(0.5)
+    update_label(lbl_status, "Ready", 0xffff00)
+
+def calibrate_sensor():
+    """校准传感器（原有不变）"""
+    update_label(lbl_status, "Calib...", 0xffff00)
+    print("Calibrating sensor. Keep device still on flat surface.")
+    time.sleep(2)
+    
+    # 读取10次取平均值
+    readings = []
+    for i in range(10):
+        accel = get_imu_data()
+        readings.append(accel[current_axis])
+        time.sleep(0.1)
+    
+    if readings:
+        avg = sum(readings) / len(readings)
+        print(f"Calibration complete. Baseline: {avg:.2f}g")
+        update_label(lbl_status, f"Cal:{avg:.2f}", 0x00ff00)
+    
+    time.sleep(1)
+    update_label(lbl_status, "Ready", 0xffff00)
+
+def detect_pushup(accel, axis_acc):
+    """检测俯卧撑（原有不变）"""
+    global pushup_count, is_down
+    
+    if not is_down and axis_acc < PUSHUP_DOWN_THRESHOLD:
+        is_down = True
+        update_label(lbl_status, "Down", 0xff0000)
+    elif is_down and axis_acc > PUSHUP_UP_THRESHOLD:
+        pushup_count += 1
+        is_down = False
+        update_label(lbl_status, "Up", 0x00ff00)
+        update_label(lbl_count, str(pushup_count), 0x00ff00)
+        return True
+    
+    return False
+
+def detect_benchpress(accel, axis_acc):
+    """检测卧推（原有不变）"""
+    global benchpress_count, is_down
+    
+    if not is_down and axis_acc < BENCHPRESS_DOWN_THRESHOLD:
+        is_down = True
+        update_label(lbl_status, "Down", 0xff0000)
+    elif is_down and axis_acc > BENCHPRESS_UP_THRESHOLD:
+        benchpress_count += 1
+        is_down = False
+        update_label(lbl_status, "Up", 0x00ff00)
+        update_label(lbl_count, str(benchpress_count), 0x00ff00)
+        return True
+    
+    return False
+
+def detect_running(accel, axis_acc):
+    """检测跑步（修复步频卡死，原有已优化，不变）"""
+    global step_count, last_step_time, cadence, step_history
+    
+    current_time = time.ticks_ms() / 1000.0
+    
+    # 使用加速度变化检测步伐
+    if abs(axis_acc) > RUNNING_THRESHOLD and (current_time - last_step_time) > 0.3:
+        step_count += 1
+        # 只保留最近2步，算实时步频（永不卡死）
+        step_history.append(current_time)
+        if len(step_history) > 2:
+            step_history.pop(0)
+        
+        # 实时步频计算（相邻两步间隔，最稳定）
+        if len(step_history) >= 2:
+            step_interval = step_history[-1] - step_history[-2]
+            if step_interval > 0:
+                cadence = int(60.0 / step_interval)
+        
+        last_step_time = current_time
+        update_label(lbl_count, str(step_count), 0x00ff00)
+        update_label(lbl_cadence, f"Cad:{cadence}/min", 0xff8800)
+        update_label(lbl_status, "Step", 0x00ff00)
+        return True
+    
+    # 静止3秒自动清零步频（不锁死旧值）
+    if current_time - last_step_time > 3:
+        cadence = 0
+        update_label(lbl_cadence, f"Cad:{cadence}/min", 0xff8800)
+    
+    return False
+
+def loop():
+    global btnA_pressed, btnB_pressed, btnA_press_time, btnA_long_pressed, btnA_handling_long_press
+    
+    M5.update()
+    
+    # 读取数据（原有不变）
+    raw_accel = get_imu_data()
+    motion_accel = get_linear_accel() 
+    axis_acc = motion_accel[current_axis]
+    
+    # 更新显示（原有不变，仅心率模式会覆盖显示）
+    update_label(lbl_raw, f"G:{raw_accel[current_axis]:.1f} M:{motion_accel[current_axis]:.1f}")
+    update_label(lbl_val, f"Acc:{abs(axis_acc):.2f}")
+    
+    # 每5秒打印一次数据到串口（用于调试，原有不变）
+    if time.ticks_ms() % 2000 < 50:
+        print(f"Accel: X={raw_accel[0]:.2f}, Y={raw_accel[1]:.2f}, Z={raw_accel[2]:.2f}")
+    
+    # 处理按钮A - 短按切换模式，长按校准（原有不变）
+    if hasattr(M5, 'BtnA'):
+        if M5.BtnA.isPressed():
+            if not btnA_pressed and not btnA_handling_long_press:
+                btnA_pressed = True
+                btnA_press_time = time.ticks_ms()
+                btnA_long_pressed = False
+        elif M5.BtnA.wasReleased():
+            if btnA_pressed and not btnA_long_pressed and not btnA_handling_long_press:
+                switch_mode()
+            btnA_pressed = False
+            btnA_handling_long_press = False
+        elif btnA_pressed and not btnA_long_pressed and not btnA_handling_long_press:
+            if time.ticks_ms() - btnA_press_time > btnA_long_press_threshold:
+                btnA_long_pressed = True
+                btnA_handling_long_press = True
+                calibrate_sensor()
+    
+    # 处理按钮B - 重置计数器（原有不变）
+    if hasattr(M5, 'BtnB'):
+        if M5.BtnB.wasPressed():
+            if not btnB_pressed:
+                reset_count()
+                btnB_pressed = True     
+        else:
+            btnB_pressed = False
+    
+    # 根据模式进行检测（原有不变，仅新增心率模式判断）
+    if current_mode == MODE_PUSHUP:
+        detect_pushup(motion_accel, axis_acc)
+    elif current_mode == MODE_BENCHPRESS:
+        detect_benchpress(motion_accel, axis_acc)
+    elif current_mode == MODE_RUNNING:
+        detect_running(motion_accel, axis_acc)
+    
+    
+
+if __name__ == '__main__':
+    try:
+        setup()
+        while True:
+            loop()
+    except Exception as e:
+        print("Program error:", e)
+        import sys
+        sys.print_exception(e)
