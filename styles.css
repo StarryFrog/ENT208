@@ -1,0 +1,500 @@
+:root {
+  --bg: #f3f7f4;
+  --ink: #14211b;
+  --muted: #66766f;
+  --panel: #ffffff;
+  --line: #dce6df;
+  --green: #1d9a6c;
+  --mint: #dff7eb;
+  --blue: #2f77d1;
+  --yellow: #f3b833;
+  --red: #e24c4c;
+  --shadow: 0 18px 50px rgba(42, 65, 55, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background: linear-gradient(135deg, #eef8f2 0%, #f7f3ea 50%, #edf4fb 100%);
+  font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 22px;
+  width: min(1440px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 22px;
+}
+
+.sidebar,
+.panel,
+.metric-card {
+  border: 1px solid rgba(20, 33, 27, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow);
+}
+
+.sidebar {
+  position: sticky;
+  top: 22px;
+  height: calc(100vh - 44px);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--green), var(--blue));
+}
+
+.brand strong,
+.brand span {
+  display: block;
+}
+
+.brand span,
+.metric-label,
+.eyebrow,
+.section-title span,
+.device-stats dt,
+.field span,
+.toggle-row span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.nav-tabs {
+  display: grid;
+  gap: 8px;
+}
+
+.nav-tab,
+.primary-btn,
+.ghost-btn,
+.device-button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ink);
+  background: #fff;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.nav-tab {
+  text-align: left;
+  padding: 0 14px;
+}
+
+.nav-tab.active,
+.device-button.active {
+  border-color: rgba(29, 154, 108, 0.35);
+  background: var(--mint);
+  color: #0d6848;
+  font-weight: 700;
+}
+
+.primary-btn {
+  width: 100%;
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+  background: var(--green);
+}
+
+.ghost-btn {
+  padding: 0 14px;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+.connection-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.section-title strong {
+  font-size: 14px;
+}
+
+.device-list {
+  display: grid;
+  gap: 8px;
+}
+
+.device-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+}
+
+.content {
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 6px 2px 18px;
+}
+
+.eyebrow,
+h1 {
+  margin: 0;
+}
+
+h1 {
+  margin-top: 6px;
+  font-size: clamp(28px, 4vw, 46px);
+  letter-spacing: 0;
+}
+
+.demo-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.25fr repeat(3, 1fr);
+  gap: 14px;
+}
+
+.metric-card,
+.panel {
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.metric-card {
+  min-height: 184px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.metric-card strong {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 46px;
+  line-height: 1;
+}
+
+.metric-card small {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.metric-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.heart-card {
+  color: #fff;
+  background: linear-gradient(135deg, #13734f, #1a9981 58%, #2f77d1);
+}
+
+.heart-card .metric-label,
+.heart-card p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.zone-pill {
+  width: fit-content;
+  padding: 7px 11px;
+  border-radius: 8px;
+  color: #073b2a;
+  background: rgba(255, 255, 255, 0.82);
+  font-weight: 800;
+}
+
+.heart-wave {
+  display: flex;
+  align-items: end;
+  gap: 5px;
+  height: 34px;
+}
+
+.heart-wave span {
+  width: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  animation: beat 1s ease-in-out infinite;
+}
+
+.heart-wave span:nth-child(1) { height: 16px; }
+.heart-wave span:nth-child(2) { height: 28px; animation-delay: 0.08s; }
+.heart-wave span:nth-child(3) { height: 20px; animation-delay: 0.16s; }
+.heart-wave span:nth-child(4) { height: 32px; animation-delay: 0.24s; }
+.heart-wave span:nth-child(5) { height: 14px; animation-delay: 0.32s; }
+
+.workout-row,
+.music-layout,
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.8fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+canvas {
+  width: 100%;
+  height: 260px;
+  display: block;
+}
+
+.device-card {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+}
+
+.device-visual {
+  display: grid;
+  place-items: center;
+  min-height: 210px;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(29, 154, 108, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(47, 119, 209, 0.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.watch-body {
+  width: 112px;
+  height: 168px;
+  padding: 18px;
+  border-radius: 38px;
+  background: #18211e;
+  box-shadow: inset 0 0 0 8px #2b3431, 0 18px 34px rgba(0, 0, 0, 0.22);
+}
+
+.watch-screen {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border-radius: 24px;
+  color: #dff7eb;
+  background: #08110e;
+}
+
+.watch-screen span {
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.watch-screen small {
+  color: #89ad9e;
+}
+
+.device-stats {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.device-stats div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.device-stats dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+}
+
+.now-playing {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 220px;
+}
+
+.album-art {
+  width: 150px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 54px;
+  background: linear-gradient(135deg, var(--green), var(--yellow), var(--red));
+}
+
+.now-playing h2 {
+  margin: 0 0 10px;
+  font-size: 30px;
+}
+
+.now-playing p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.playlist-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.playlist-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.playlist-row input,
+.field input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.field,
+.toggle-row {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.toggle-row {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.toggle-row input {
+  width: 22px;
+  height: 22px;
+}
+
+pre {
+  min-height: 228px;
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border-radius: 8px;
+  color: #dff7eb;
+  background: #101c18;
+  line-height: 1.7;
+}
+
+.is-alert {
+  color: var(--red);
+}
+
+@keyframes beat {
+  0%, 100% { transform: scaleY(0.65); opacity: 0.65; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@media (max-width: 1050px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .dashboard-grid,
+  .workout-row,
+  .music-layout,
+  .settings-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .heart-card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .topbar,
+  .now-playing {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-grid,
+  .workout-row,
+  .music-layout,
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .heart-card {
+    grid-column: auto;
+  }
+
+  .metric-card strong {
+    font-size: 40px;
+  }
+}

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FitSense 智能健身伴侣</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="主导航">
+        <div class="brand">
+          <div class="brand-mark">FS</div>
+          <div>
+            <strong>FitSense</strong>
+            <span>M5StickS3 Companion</span>
+          </div>
+        </div>
+        <nav class="nav-tabs" aria-label="页面切换">
+          <button class="nav-tab active" type="button" data-view="dashboard">实时面板</button>
+          <button class="nav-tab" type="button" data-view="music">音乐推荐</button>
+          <button class="nav-tab" type="button" data-view="settings">设备设置</button>
+        </nav>
+        <section class="connection-panel">
+          <div class="section-title">
+            <span>BLE 连接</span>
+            <strong id="connectionStatus">未连接</strong>
+          </div>
+          <button class="primary-btn" id="scanBtn" type="button">扫描设备</button>
+          <div class="device-list" id="deviceList" aria-live="polite"></div>
+        </section>
+      </aside>
+
+      <section class="content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">智能健身穿戴系统 Demo</p>
+            <h1>实时读取运动与心率状态</h1>
+          </div>
+          <div class="demo-controls">
+            <button class="ghost-btn" id="pauseBtn" type="button">暂停模拟</button>
+            <button class="ghost-btn" id="resetBtn" type="button">重置数据</button>
+          </div>
+        </header>
+
+        <section class="view active" id="dashboardView">
+          <div class="dashboard-grid">
+            <article class="metric-card heart-card">
+              <span class="metric-label">当前心率</span>
+              <strong><span id="heartRate">--</span><small>BPM</small></strong>
+              <div class="zone-pill" id="zonePill">等待设备</div>
+              <div class="heart-wave" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <span class="metric-label">跑步步数</span>
+              <strong><span id="runSteps">0</span><small>steps</small></strong>
+              <p>距离估算 <b id="distance">0.00 km</b></p>
+            </article>
+
+            <article class="metric-card">
+              <span class="metric-label">深蹲次数</span>
+              <strong><span id="squatCount">0</span><small>reps</small></strong>
+              <p id="squatTrend">动作识别待启动</p>
+            </article>
+
+            <article class="metric-card">
+              <span class="metric-label">卧推次数</span>
+              <strong><span id="benchCount">0</span><small>reps</small></strong>
+              <p id="benchTrend">动作识别待启动</p>
+            </article>
+          </div>
+
+          <div class="workout-row">
+            <section class="panel">
+              <div class="section-title">
+                <span>实时数据流</span>
+                <strong id="packetTime">--:--:--</strong>
+              </div>
+              <canvas id="heartChart" width="780" height="260" aria-label="心率历史曲线"></canvas>
+            </section>
+            <section class="panel device-card">
+              <div class="device-visual">
+                <div class="watch-body">
+                  <div class="watch-screen">
+                    <span id="watchHr">--</span>
+                    <small>BPM</small>
+                  </div>
+                </div>
+              </div>
+              <dl class="device-stats">
+                <div><dt>设备</dt><dd id="connectedDevice">未选择</dd></div>
+                <div><dt>服务 UUID</dt><dd>FIT-HEALTH-SVC</dd></div>
+                <div><dt>通知 UUID</dt><dd>FIT-NOTIFY-01</dd></div>
+                <div><dt>信号</dt><dd id="signalStrength">-- dBm</dd></div>
+              </dl>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="musicView">
+          <div class="music-layout">
+            <section class="panel">
+              <div class="section-title">
+                <span>当前推荐</span>
+                <strong id="musicZone">等待心率</strong>
+              </div>
+              <div class="now-playing">
+                <div class="album-art" id="albumArt">♪</div>
+                <div>
+                  <h2 id="trackName">连接设备后自动推荐</h2>
+                  <p id="trackReason">根据 Zone 1-4 心率区间切换歌单。</p>
+                </div>
+              </div>
+            </section>
+            <section class="panel">
+              <div class="section-title">
+                <span>区间歌单</span>
+                <strong>可自定义</strong>
+              </div>
+              <div class="playlist-editor" id="playlistEditor"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="settingsView">
+          <div class="settings-grid">
+            <section class="panel">
+              <div class="section-title">
+                <span>用户设置</span>
+                <strong>本地保存</strong>
+              </div>
+              <label class="field">
+                <span>步幅估算（米）</span>
+                <input id="strideInput" type="number" min="0.4" max="1.4" step="0.01" value="0.78" />
+              </label>
+              <label class="field">
+                <span>目标心率上限</span>
+                <input id="targetHrInput" type="number" min="100" max="190" step="1" value="160" />
+              </label>
+              <label class="toggle-row">
+                <span>自动切换音乐</span>
+                <input id="autoMusicInput" type="checkbox" checked />
+              </label>
+            </section>
+            <section class="panel">
+              <div class="section-title">
+                <span>原始 JSON 包</span>
+                <strong>示例格式</strong>
+              </div>
+              <pre id="jsonPacket">{
+  "hr": 142,
+  "squat": 18,
+  "bench": 10,
+  "run": 620
+}</pre>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "com.fitsense.demo"
+    compileSdk 36
+    compileSdkExtension 20
+
+    defaultConfig {
+        applicationId "com.fitsense.demo"
+        minSdk 23
+        targetSdk 36
+        versionCode 1
+        versionName "1.0"
+    }
+}
