@@ -1,0 +1,70 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.fitsense.demo"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="23"
+9        android:targetSdkVersion="36" />
+10
+11    <uses-permission
+11-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:2:5-95
+12        android:name="android.permission.BLUETOOTH"
+12-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:2:22-65
+13        android:maxSdkVersion="30" />
+13-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:2:66-92
+14    <uses-permission
+14-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:3:5-101
+15        android:name="android.permission.BLUETOOTH_ADMIN"
+15-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:3:22-71
+16        android:maxSdkVersion="30" />
+16-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:3:72-98
+17    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+17-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:4:5-73
+17-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:4:22-70
+18    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+18-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:5:5-76
+18-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:5:22-73
+19    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+19-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:6:5-79
+19-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:6:22-76
+20    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+20-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:7:5-81
+20-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:7:22-78
+21
+22    <application
+22-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:9:5-23:19
+23        android:allowBackup="true"
+23-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:10:9-35
+24        android:debuggable="true"
+25        android:extractNativeLibs="false"
+26        android:label="FitSense Demo"
+26-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:11:9-38
+27        android:testOnly="true"
+28        android:theme="@style/AppTheme"
+28-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:12:9-40
+29        android:usesCleartextTraffic="true" >
+29-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:13:9-44
+30        <activity
+30-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:14:9-22:20
+31            android:name="com.fitsense.demo.MainActivity"
+31-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:15:13-41
+32            android:exported="true"
+32-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:16:13-36
+33            android:screenOrientation="portrait" >
+33-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:17:13-49
+34            <intent-filter>
+34-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:18:13-21:29
+35                <action android:name="android.intent.action.MAIN" />
+35-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:19:17-69
+35-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:19:25-66
+36
+37                <category android:name="android.intent.category.LAUNCHER" />
+37-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:20:17-77
+37-->/Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/AndroidManifest.xml:20:27-74
+38            </intent-filter>
+39        </activity>
+40    </application>
+41
+42</manifest>

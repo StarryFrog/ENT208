@@ -1,0 +1,7 @@
+com.fitsense.demo.app-pngs-0 /Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/build/generated/res/pngs/debug
+com.fitsense.demo.app-resValues-1 /Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/build/generated/res/resValues/debug
+com.fitsense.demo.app-packageDebugResources-2 /Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.fitsense.demo.app-packageDebugResources-3 /Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.fitsense.demo.app-debug-4 /Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/build/intermediates/merged_res/debug/mergeDebugResources
+com.fitsense.demo.app-debug-5 /Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/debug/res
+com.fitsense.demo.app-main-6 /Users/yuantu.zhao/Documents/New project/FitSenseAndroid/app/src/main/res
